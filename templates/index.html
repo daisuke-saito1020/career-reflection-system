@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>キャリア自己分析システム</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">キャリア自己分析システム</h1>
+        
+        <!-- エラー表示 -->
+        <div id="error-message" class="hidden max-w-2xl mx-auto bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+            <span class="block sm:inline"></span>
+        </div>
+
+        <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">今日の質問</h2>
+            <div class="mb-2">
+                <button onclick="loadQuestion()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">新しい質問を取得</button>
+            </div>
+            <p id="question" class="text-lg mb-4">質問を読み込んでいます...</p>
+            <textarea id="answer" class="w-full h-32 p-2 border rounded mb-4" placeholder="あなたの回答を入力してください"></textarea>
+            <button onclick="submitReflection()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">回答を保存</button>
+        </div>
+
+        <!-- 履歴表示 -->
+        <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">質問と回答の履歴</h2>
+            <div id="reflections-list" class="space-y-4">
+                <!-- 履歴がここに表示されます -->
+            </div>
+        </div>
+
+        <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">キャリアアドバイス</h2>
+            <button onclick="getAdvice()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mb-4">アドバイスを取得</button>
+            <div id="advice" class="prose"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentQuestion = '';
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.querySelector('span').textContent = message;
+            errorDiv.classList.remove('hidden');
+            setTimeout(() => {
+                errorDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        async function loadQuestion() {
+            try {
+                document.getElementById('question').textContent = '質問を読み込んでいます...';
+                const response = await fetch('/api/question');
+                const data = await response.json();
+                
+                if (data.status === 'error') {
+                    showError('質問の取得に失敗しました: ' + data.message);
+                    return;
+                }
+                
+                currentQuestion = data.question;
+                document.getElementById('question').textContent = currentQuestion;
+            } catch (error) {
+                showError('エラーが発生しました: ' + error.message);
+                console.error('Error:', error);
+            }
+        }
+
+        async function submitReflection() {
+            try {
+                const answer = document.getElementById('answer').value;
+                if (!answer) {
+                    showError('回答を入力してください');
+                    return;
+                }
+
+                const response = await fetch('/api/reflection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question: currentQuestion,
+                        answer: answer
+                    })
+                });
+
+                const data = await response.json();
+                if (data.status === 'error') {
+                    showError('回答の保存に失敗しました: ' + data.message);
+                    return;
+                }
+
+                alert('回答を保存しました');
+                document.getElementById('answer').value = '';
+                loadQuestion();
+                loadReflections();
+            } catch (error) {
+                showError('エラーが発生しました: ' + error.message);
+                console.error('Error:', error);
+            }
+        }
+
+        async function loadReflections() {
+            try {
+                const response = await fetch('/api/reflections');
+                const data = await response.json();
+                
+                if (data.status === 'error') {
+                    showError('履歴の取得に失敗しました: ' + data.message);
+                    return;
+                }
+
+                const reflectionsList = document.getElementById('reflections-list');
+                reflectionsList.innerHTML = data.reflections.map(r => `
+                    <div class="border-b pb-4">
+                        <div class="text-sm text-gray-500">${r.date}</div>
+                        <div class="font-semibold mt-2">Q: ${r.question}</div>
+                        <div class="mt-2">A: ${r.answer}</div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                showError('エラーが発生しました: ' + error.message);
+                console.error('Error:', error);
+            }
+        }
+
+        async function getAdvice() {
+            try {
+                const response = await fetch('/api/advice');
+                const data = await response.json();
+                
+                if (data.status === 'error') {
+                    showError('アドバイスの取得に失敗しました: ' + data.message);
+                    return;
+                }
+
+                document.getElementById('advice').innerHTML = data.advice.replace(/\n/g, '<br>');
+            } catch (error) {
+                showError('エラーが発生しました: ' + error.message);
+                console.error('Error:', error);
+            }
+        }
+
+        // 初期読み込み
+        loadQuestion();
+        loadReflections();
+    </script>
+</body>
+</html>
