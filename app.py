@@ -74,6 +74,7 @@ except Exception as e:
     raise
 
 class Reflection(db.Model):
+    __tablename__ = 'reflection'  # テーブル名を明示的に指定
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     question = db.Column(db.Text, nullable=False)
