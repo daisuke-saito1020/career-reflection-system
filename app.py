@@ -22,6 +22,10 @@ DIFY_API_ENDPOINT = os.getenv('DIFY_API_ENDPOINT')
 if not DIFY_API_KEY or not DIFY_API_ENDPOINT:
     raise ValueError("DIFY_API_KEY and DIFY_API_ENDPOINT must be set in .env file")
 
+# Create tables if they don't exist
+with app.app_context():
+    db.create_all()
+
 class Reflection(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
@@ -171,6 +175,4 @@ def get_advice():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
